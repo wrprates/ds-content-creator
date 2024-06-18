@@ -5,7 +5,7 @@ account: wrprates
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 12197768
-bundleId: 8756532
+bundleId: 8756536
 url: https://wrprates.shinyapps.io/ds-content-creator/
 version: 1
 asMultiple: FALSE
