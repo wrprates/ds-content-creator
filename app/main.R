@@ -69,7 +69,7 @@ ui <- function(id) {
           selectInput(ns("category"), "Selecione a área de Ciência de Dados:", choices = categories),
           actionButton(ns("generate"), "Gerar Postagem")
         ),
-        textOutput(ns("generated_text"))
+        htmlOutput(ns("generated_text"))
       )
     )
   )
@@ -88,14 +88,15 @@ server <- function(id) {
         "2. Forneça uma explicação técnica, incluindo termos e conceitos relevantes.\n",
         "3. Inclua uma curiosidade ou dica prática sobre o uso do tópico na prática.\n",
         "4. Termine com uma chamada para ação, convidando o leitor a aprender mais ou compartilhar suas próprias experiências.\n\n",
-        "Use este prompt para gerar postagens diárias que ajudem a construir seu perfil no LinkedIn, fornecendo valor técnico e engajando seu público."
+        "Use este prompt para gerar postagens diárias que ajudem a construir seu perfil no LinkedIn, fornecendo valor técnico e engajando seu público.",
+        "O resultado do prompt deve ser em html."
       )
       text <- tryCatch({
         send_message_to_chatgpt(prompt)
       }, error = function(e) {
         paste("Erro ao gerar a postagem:", e$message)
       })
-      output$generated_text <- renderText({ text })
+      output$generated_text <- renderUI({ HTML(text) })
     })
   })
 }
