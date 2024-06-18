@@ -6,7 +6,7 @@ O **Data Science Content Creator** é um aplicativo Shiny modularizado que utili
 
 - **Seleção de Categoria**: Escolha entre categorias como Estatística, Machine Learning, Método Científico, Computação e Conhecimento de Negócio.
 - **Geração de Conteúdo**: Gera postagens técnicas e informativas que ajudam a construir e engajar seu perfil no LinkedIn.
-- **Interface Amigável**: Utiliza o tema `flatly` do Bootstrap para uma experiência de usuário agradável.
+- **Interface Amigável**: Utiliza Bootstrap para uma experiência de usuário agradável.
 - **Interação com API da OpenAI**: Integração direta para gerar textos de alta qualidade utilizando o modelo GPT-4 da OpenAI.
 
 ## Configuração da API
