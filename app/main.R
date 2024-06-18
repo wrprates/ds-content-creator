@@ -7,7 +7,6 @@ box::use(
   waiter[use_waiter, waiter_show, waiter_hide, spin_fading_circles, ...]
 )
 
-
 # Substitua 'YOUR_API_KEY' pela sua chave da API OpenAI
 api_key <- Sys.getenv("OPENAI_KEY")
 
