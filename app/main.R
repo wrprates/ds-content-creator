@@ -89,7 +89,8 @@ ui <- function(id) {
         ),
         htmlOutput(ns("generated_text"))
       )
-    )
+    ),
+    theme = bs_theme(bootswatch = "litera")
   )
 }
 
@@ -126,7 +127,7 @@ server <- function(id) {
         "4. Termine com uma chamada para ação, convidando o leitor a aprender mais ou compartilhar suas próprias experiências.\n\n",
         "Use este prompt para gerar postagens diárias que ajudem a construir seu perfil no LinkedIn, fornecendo valor técnico e engajando seu público.",
         "O resultado do prompt deve ser em html puro, quebre linhas com a tag p do html, trazendo direto o resultado, sem mensagens introdutórias. Evite formatações específicas e chunks de código.",
-        "Priorize o tamanho do prompt."
+        "Priorize o tamanho do prompt. Uso de emojis é liberado."
       )
       text <- tryCatch({
         send_message_to_chatgpt(prompt)
