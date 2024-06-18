@@ -60,15 +60,15 @@ categories <- c("Estatística", "Machine Learning", "Método Científico", "Comp
 #' @export
 ui <- function(id) {
   ns <- NS(id)
-  fluidPage(
-    theme = bs_theme(bootswatch = "flatly"),
-    titlePanel("Gerador de Postagens para LinkedIn"),
-    sidebarLayout(
-      sidebarPanel(
-        selectInput(ns("category"), "Selecione a área de Ciência de Dados:", choices = categories),
-        actionButton(ns("generate"), "Gerar Postagem")
-      ),
-      mainPanel(
+  page_fillable(
+    card(
+      full_screen = TRUE,
+      card_header("Data Science Content Creator"),
+      layout_sidebar(
+        sidebar = sidebar(
+          selectInput(ns("category"), "Selecione a área de Ciência de Dados:", choices = categories),
+          actionButton(ns("generate"), "Gerar Postagem")
+        ),
         textOutput(ns("generated_text"))
       )
     )
