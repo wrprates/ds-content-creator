@@ -4,6 +4,7 @@ box::use(
   jsonlite[...],
   shiny[...],
   xml2[read_html],
+  waiter[use_waiter, waiter_show, waiter_hide, spin_fading_circles, ...]
 )
 
 
@@ -69,8 +70,9 @@ sizes <- c("Pequeno", "Médio", "Longo")
 ui <- function(id) {
   ns <- NS(id)
   page_fillable(
+    use_waiter(),
     card(
-      full_screen = TRUE,
+      full_screen = FALSE,
       card_header("Data Science Content Creator"),
       layout_sidebar(
         sidebar = sidebar(
@@ -96,6 +98,11 @@ ui <- function(id) {
 server <- function(id) {
   moduleServer(id, function(input, output, session) {
     observeEvent(input$generate, {
+      waiter_show(
+        html = bs5_spinner(),
+        color = "rgba(255, 255, 255, 0.35)"
+      )
+
       category <- input$category
       level <- input$level
       size <- input$size
@@ -129,6 +136,7 @@ server <- function(id) {
       })
       cleaned_text <- clean_html(text)
       output$generated_text <- renderUI({ HTML(cleaned_text) })
+      waiter_hide()
     })
   })
 }
