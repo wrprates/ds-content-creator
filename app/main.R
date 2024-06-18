@@ -77,7 +77,14 @@ ui <- function(id) {
           selectInput(ns("category"), "Selecione a área de Ciência de Dados:", choices = categories),
           selectInput(ns("level"), "Selecione o nível do Cientista de Dados:", choices = levels, selected = "Intermediário"),
           selectInput(ns("size"), "Selecione o tamanho do post:", choices = sizes, selected = "Médio"),
-          actionButton(ns("generate"), "Gerar Postagem")
+          actionButton(ns("generate"), "Gerar Postagem"),
+          tags$div(
+            "By ",
+            tags$a(href = "https://www.linkedin.com/in/wlademir-ribeiro-prates/", "Wlademir Prates", target = "_blank"),
+            tags$br(),
+            tags$a(href = "https://github.com/wrprates/ds-content-creator", target = "_blank", 
+                   tags$i(class = "fa-github"), " GitHub")
+          )
         ),
         htmlOutput(ns("generated_text"))
       )
@@ -107,7 +114,7 @@ server <- function(id) {
         "A postagem deve ser clara, objetiva e fornecer benefícios ou curiosidades ao leitor. Evite parecer que o texto foi gerado por uma IA, e mostre rigor intelectual e profundidade técnica.",
         "O nível do cientista de dados é:", level, ".",
         "O tamanho desejado para o post é:", size, "com aproximadamente", size_chars, "caracteres.\n\n",
-        "1. Introduza o tópico com uma frase chamativa.\n",
+        "1. Introduza o tópico com uma frase chamativa, que deve sempre ser formatada com negrito apenas.\n",
         "2. Forneça uma explicação técnica, incluindo termos e conceitos relevantes.\n",
         "3. Inclua uma curiosidade ou dica prática sobre o uso do tópico na prática.\n",
         "4. Termine com uma chamada para ação, convidando o leitor a aprender mais ou compartilhar suas próprias experiências.\n\n",
