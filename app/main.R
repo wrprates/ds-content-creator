@@ -3,6 +3,7 @@ box::use(
   httr[...],
   jsonlite[...],
   shiny[...],
+  xml2[read_html],
 )
 
 
@@ -53,9 +54,16 @@ send_message_to_chatgpt <- function(message) {
   }
 }
 
+# Função para limpar HTML
+clean_html <- function(html_text) {
+  doc <- read_html(html_text)
+  as.character(doc)
+}
+
 # Defina as categorias
 categories <- c("Estatística", "Machine Learning", "Método Científico", "Computação", "Conhecimento de Negócio")
-
+levels <- c("Iniciante", "Intermediário", "Avançado")
+sizes <- c("Pequeno", "Médio", "Longo")
 
 #' @export
 ui <- function(id) {
@@ -67,6 +75,8 @@ ui <- function(id) {
       layout_sidebar(
         sidebar = sidebar(
           selectInput(ns("category"), "Selecione a área de Ciência de Dados:", choices = categories),
+          selectInput(ns("level"), "Selecione o nível do Cientista de Dados:", choices = levels, selected = "Intermediário"),
+          selectInput(ns("size"), "Selecione o tamanho do post:", choices = sizes, selected = "Médio"),
           actionButton(ns("generate"), "Gerar Postagem")
         ),
         htmlOutput(ns("generated_text"))
@@ -80,23 +90,38 @@ server <- function(id) {
   moduleServer(id, function(input, output, session) {
     observeEvent(input$generate, {
       category <- input$category
+      level <- input$level
+      size <- input$size
+      
+      # Defina o número de caracteres desejado com base no tamanho do post
+      size_chars <- switch(
+        size,
+        "Pequeno" = 300,
+        "Médio" = 600,
+        "Longo" = 800
+      )
+      
       prompt <- paste(
         "Você é um especialista em ciência de dados e seu objetivo é ajudar profissionais iniciantes a entrar na área, fornecendo conteúdo técnico, informativo e interessante para postar no LinkedIn. Cada postagem deve abordar um tópico específico dentro de uma das seguintes categorias:", 
         category, 
-        "A postagem deve ser clara, objetiva e fornecer benefícios ou curiosidades ao leitor. Evite parecer que o texto foi gerado por uma IA, e mostre rigor intelectual e profundidade técnica.\n\n",
+        "A postagem deve ser clara, objetiva e fornecer benefícios ou curiosidades ao leitor. Evite parecer que o texto foi gerado por uma IA, e mostre rigor intelectual e profundidade técnica.",
+        "O nível do cientista de dados é:", level, ".",
+        "O tamanho desejado para o post é:", size, "com aproximadamente", size_chars, "caracteres.\n\n",
         "1. Introduza o tópico com uma frase chamativa.\n",
         "2. Forneça uma explicação técnica, incluindo termos e conceitos relevantes.\n",
         "3. Inclua uma curiosidade ou dica prática sobre o uso do tópico na prática.\n",
         "4. Termine com uma chamada para ação, convidando o leitor a aprender mais ou compartilhar suas próprias experiências.\n\n",
         "Use este prompt para gerar postagens diárias que ajudem a construir seu perfil no LinkedIn, fornecendo valor técnico e engajando seu público.",
-        "O resultado do prompt deve ser em html."
+        "O resultado do prompt deve ser em html puro, trazendo direto o resultado, sem mensagens introdutórias. Evite formatações específicas e chunks de código.",
+        "Priorize o tamanho do prompt."
       )
       text <- tryCatch({
         send_message_to_chatgpt(prompt)
       }, error = function(e) {
         paste("Erro ao gerar a postagem:", e$message)
       })
-      output$generated_text <- renderUI({ HTML(text) })
+      cleaned_text <- clean_html(text)
+      output$generated_text <- renderUI({ HTML(cleaned_text) })
     })
   })
 }
