@@ -114,12 +114,12 @@ server <- function(id) {
         "A postagem deve ser clara, objetiva e fornecer benefícios ou curiosidades ao leitor. Evite parecer que o texto foi gerado por uma IA, e mostre rigor intelectual e profundidade técnica.",
         "O nível do cientista de dados é:", level, ".",
         "O tamanho desejado para o post é:", size, "com aproximadamente", size_chars, "caracteres.\n\n",
-        "1. Introduza o tópico com uma frase chamativa, que deve sempre ser formatada com negrito apenas.\n",
+        "1. Introduza o tópico com uma frase chamativa, que deve sempre ser formatada com tag b de html apenas.\n",
         "2. Forneça uma explicação técnica, incluindo termos e conceitos relevantes.\n",
         "3. Inclua uma curiosidade ou dica prática sobre o uso do tópico na prática.\n",
         "4. Termine com uma chamada para ação, convidando o leitor a aprender mais ou compartilhar suas próprias experiências.\n\n",
         "Use este prompt para gerar postagens diárias que ajudem a construir seu perfil no LinkedIn, fornecendo valor técnico e engajando seu público.",
-        "O resultado do prompt deve ser em html puro, trazendo direto o resultado, sem mensagens introdutórias. Evite formatações específicas e chunks de código.",
+        "O resultado do prompt deve ser em html puro, quebre linhas com a tag p do html, trazendo direto o resultado, sem mensagens introdutórias. Evite formatações específicas e chunks de código.",
         "Priorize o tamanho do prompt."
       )
       text <- tryCatch({
