@@ -2,8 +2,12 @@ box::use(
   bslib[card, card_header, layout_sidebar, sidebar],
   httr[POST, add_headers, content_type_json, content, status_code],
   jsonlite[toJSON, fromJSON],
-  shiny[NS, moduleServer, observeEvent, renderUI, HTML, selectInput, actionButton, tags, htmlOutput],
+  shiny[NS, moduleServer, observeEvent, renderUI, HTML, selectInput, actionButton, tags, htmlOutput, tagList],
   waiter[waiter_show, waiter_hide, bs5_spinner]
+)
+
+box::use(
+  app/logic/utils[send_message_to_chatgpt, clean_html, remove_code_delimiters]
 )
 
 # Valores fixos específicos do módulo
@@ -22,9 +26,22 @@ ui <- function(id) {
         selectInput(ns("category"), "Selecione a área de Ciência de Dados:", choices = categories),
         selectInput(ns("level"), "Selecione o nível do Quiz:", choices = levels, selected = "Intermediário"),
         selectInput(ns("num_questions"), "Número de perguntas:", choices = num_questions, selected = 3),
-        actionButton(ns("generate"), "Gerar Quiz")
+        actionButton(ns("generate"), "Gerar Quiz"),
+        actionButton(ns("reveal"), "Revelar Respostas", class = "mt-3")
       ),
-      htmlOutput(ns("generated_quiz"))
+      tagList(
+        htmlOutput(ns("generated_quiz")),
+        tags$script(HTML(
+          sprintf("
+          $(document).on('click', '#%s', function() {
+            $('.answer').toggleClass('hidden');
+            $(this).text(function(i, text) {
+              return text === 'Revelar Respostas' ? 'Ocultar Respostas' : 'Revelar Respostas';
+            });
+          });
+          ", ns("reveal"))
+        ))
+      )
     )
   )
 }
@@ -46,7 +63,7 @@ server <- function(id, api_key, openai_url) {
         "Crie um quiz de", num_questions, "perguntas sobre", category, 
         "para um cientista de dados de nível", level, ". ",
         "Cada pergunta deve ter 4 opções de resposta, com apenas uma correta. ",
-        "Forneça a resposta correta após cada pergunta. ",
+        "Forneça a resposta correta após cada pergunta, envolvida em uma div com a classe 'answer'. ",
         "O resultado deve ser em HTML puro, usando tags <p> para quebras de linha e <b> para destaque.",
         "Use <ol> para a lista de perguntas e <ul> para as opções de resposta.",
         "Não inclua nenhuma mensagem introdutória ou de conclusão."
@@ -59,69 +76,13 @@ server <- function(id, api_key, openai_url) {
       })
       
       cleaned_quiz <- clean_html(quiz)
-      output$generated_quiz <- renderUI({ HTML(cleaned_quiz) })
+      output$generated_quiz <- renderUI({ 
+        HTML(paste0(
+          "<style>.answer { display: none; }</style>",
+          cleaned_quiz
+        ))
+      })
       waiter_hide()
     })
   })
-}
-
-# Funções auxiliares
-send_message_to_chatgpt <- function(message, api_key, openai_url) {
-  body <- list(
-    model = "gpt-4o",
-    messages = list(
-      list(role = "user", content = message)
-    )
-  )
-  
-  body_json <- toJSON(body, auto_unbox = TRUE)
-  
-  response <- POST(
-    url = openai_url,
-    add_headers(Authorization = paste("Bearer", api_key)),
-    content_type_json(),
-    body = body_json
-  )
-  
-  if (status_code(response) != 200) {
-    response_text <- content(response, "text", encoding = "UTF-8")
-    cat("Resposta completa da API:\n", response_text, "\n")
-    stop("Falha na requisição: ", response_text)
-  }
-  
-  response_content <- content(response, as = "text", encoding = "UTF-8")
-  response_json <- fromJSON(response_content, simplifyVector = FALSE)
-  
-  if (!is.null(response_json$choices) && length(response_json$choices) > 0) {
-    return(response_json$choices[[1]]$message$content)
-  } else {
-    stop("Estrutura inesperada da resposta: ", response_content)
-  }
-}
-
-clean_html <- function(html_text) {
-  # Primeiro, remove os delimitadores de código
-  text <- remove_code_delimiters(html_text)
-  
-  # Remove todas as tags HTML, exceto <b>, <p>, <br>, <ol>, <ul>, e <li>
-  text <- gsub("<(?!/?(b|p|br|ol|ul|li))[^>]+>", "", text, perl = TRUE)
-  
-  # Remove qualquer DOCTYPE, html, head ou body remanescente
-  text <- gsub("<!DOCTYPE[^>]*>", "", text)
-  text <- gsub("</?html[^>]*>", "", text)
-  text <- gsub("</?head[^>]*>", "", text)
-  text <- gsub("</?body[^>]*>", "", text)
-  
-  # Remove espaços em branco extras
-  text <- gsub("\\s+", " ", text)
-  text <- trimws(text)
-  
-  return(text)
-}
-
-remove_code_delimiters <- function(text) {
-  # Remove ```html no início e ``` no final, se presentes
-  text <- gsub("^\\s*```html\\s*", "", text)
-  text <- gsub("\\s*```\\s*$", "", text)
-  return(text)
 }

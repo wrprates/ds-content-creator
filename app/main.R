@@ -6,7 +6,7 @@ box::use(
 
 box::use(
   ./view/content_generator,
-  ./view/quiz_generator
+  ./view/quiz_generator,
 ) 
 
 # Configurações globais
