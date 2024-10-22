@@ -2,8 +2,11 @@ box::use(
   bslib[card, card_header, layout_sidebar, sidebar],
   httr[POST, add_headers, content_type_json, content, status_code],
   jsonlite[toJSON, fromJSON],
-  shiny[NS, moduleServer, observeEvent, renderUI, HTML, selectInput, actionButton, tags, htmlOutput, tagList, div, reactiveVal, isolate, req],
-  waiter[waiter_show, waiter_hide, bs5_spinner]
+  shiny[NS, moduleServer, observeEvent, renderUI, HTML, selectInput, actionButton, tags, htmlOutput, tagList, div, reactiveVal, isolate, req, downloadHandler, downloadButton],
+  waiter[waiter_show, waiter_hide, bs5_spinner],
+  rvest[read_html, html_text],
+  xml2[xml_find_all],
+  quarto
 )
 
 box::use(
@@ -26,7 +29,8 @@ ui <- function(id) {
         selectInput(ns("level"), "Selecione o nível do Quiz:", choices = levels, selected = "Intermediário"),
         selectInput(ns("num_questions"), "Número de perguntas:", choices = num_questions, selected = 3),
         actionButton(ns("generate"), "Gerar Quiz"),
-        actionButton(ns("reveal"), "Revelar Respostas", class = "mt-3")
+        actionButton(ns("reveal"), "Revelar Respostas", class = "mt-3"),
+        downloadButton(ns("download_pdf"), "Baixar PDF", class = "mt-3")
       ),
       div(
         id = ns("quiz_container"),
@@ -113,5 +117,70 @@ server <- function(id, api_key, openai_url) {
         ))
       )
     })
+
+    output$download_pdf <- downloadHandler(
+      filename = function() {
+        paste("quiz_", input$category, "_", input$level, ".pdf", sep = "")
+      },
+      content = function(file) {
+        # Criar um diretório temporário
+        temp_dir <- tempdir()
+        temp_qmd <- file.path(temp_dir, "quiz.qmd")
+        
+        tryCatch({
+          # Criar o conteúdo Quarto
+          quarto_content <- c(
+            "---",
+            paste0("title: 'Quiz de ", input$category, " para nível ", input$level, "'"),
+            "format: pdf",
+            "---",
+            "",
+            "# Perguntas"
+          )
+          
+          # Parsear o conteúdo HTML do quiz
+          html_content <- read_html(quiz_content())
+          
+          # Extrair perguntas, respostas e explicações
+          questions <- xml_find_all(html_content, "//ol/li")
+          
+          for (i in seq_along(questions)) {
+            question_text <- html_text(questions[[i]])
+            answer <- html_text(xml_find_all(questions[[i]], ".//div[@class='answer']"))
+            explanation <- html_text(xml_find_all(questions[[i]], ".//div[@class='explanation']"))
+            
+            # Adicionar pergunta
+            quarto_content <- c(quarto_content, paste0(i, ". ", question_text))
+            
+            # Adicionar resposta
+            quarto_content <- c(quarto_content, "", "**Resposta:**", answer)
+            
+            # Adicionar explicação
+            quarto_content <- c(quarto_content, "", "**Explicação:**", explanation)
+            
+            # Adicionar espaço entre perguntas
+            quarto_content <- c(quarto_content, "", "---", "")
+          }
+          
+          # Escrever o conteúdo Quarto no arquivo temporário
+          writeLines(quarto_content, temp_qmd)
+          
+          # Renderizar o arquivo Quarto para PDF
+          quarto::quarto_render(temp_qmd)
+          
+          # Mover o arquivo PDF gerado para o local desejado
+          file.copy(file.path(temp_dir, "quiz.pdf"), file)
+          
+        }, error = function(e) {
+          # Log do erro
+          message("Erro ao gerar PDF: ", e$message)
+          # Criar um arquivo de texto simples com a mensagem de erro
+          writeLines(paste("Erro ao gerar PDF:", e$message), file)
+        }, finally = {
+          # Limpar os arquivos temporários
+          unlink(temp_dir, recursive = TRUE)
+        })
+      }
+    )
   })
 }
