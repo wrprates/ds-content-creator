@@ -20,7 +20,6 @@ ui <- function(id) {
   ns <- NS(id)
   card(
     full_screen = FALSE,
-    card_header("Gerador de Quiz"),
     layout_sidebar(
       sidebar = sidebar(
         selectInput(ns("category"), "Selecione a área de Ciência de Dados:", choices = categories),
