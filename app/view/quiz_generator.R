@@ -2,8 +2,10 @@ box::use(
   bslib[card, card_header, layout_sidebar, sidebar],
   httr[POST, add_headers, content_type_json, content, status_code],
   jsonlite[toJSON, fromJSON],
-  shiny[NS, moduleServer, observeEvent, renderUI, HTML, selectInput, actionButton, tags, htmlOutput, tagList, div, reactiveVal, isolate, req],
-  waiter[waiter_show, waiter_hide, bs5_spinner]
+  shiny[NS, moduleServer, observeEvent, renderUI, HTML, selectInput, actionButton, tags, htmlOutput, tagList, div, reactiveVal, isolate, req, radioButtons, textOutput, renderText],
+  waiter[waiter_show, waiter_hide, bs5_spinner],
+  rvest[read_html, html_text],
+  xml2[xml_find_all, xml_find_first, xml_text]
 )
 
 box::use(
@@ -37,7 +39,9 @@ ui <- function(id) {
         selectInput(ns("level"), "Selecione o nível do Quiz:", choices = levels, selected = "Intermediário"),
         selectInput(ns("num_questions"), "Número de perguntas:", choices = num_questions, selected = 3),
         actionButton(ns("generate"), "Gerar Quiz"),
-        actionButton(ns("reveal"), "Revelar Respostas", class = "mt-3")
+        actionButton(ns("reveal"), "Revelar Respostas", class = "mt-3"),
+        actionButton(ns("check"), "Verificar Respostas", class = "mt-3"),
+        textOutput(ns("score"))
       ),
       div(
         id = ns("quiz_container"),
@@ -51,6 +55,7 @@ ui <- function(id) {
 server <- function(id, api_key, openai_url) {
   moduleServer(id, function(input, output, session) {
     quiz_content <- reactiveVal("")
+    correct_answers <- reactiveVal(list())
 
     observeEvent(input$generate, {
       waiter_show(
@@ -92,12 +97,60 @@ server <- function(id, api_key, openai_url) {
 
     output$generated_quiz <- renderUI({
       req(quiz_content())
+      
+      parsed_html <- read_html(quiz_content())
+      questions <- xml_find_all(parsed_html, "//ol/li")
+      
+      quiz_ui <- tagList()
+      answers <- list()
+      
+      for (i in seq_along(questions)) {
+        question_text <- xml_text(xml_find_first(questions[[i]], "./p[1]"))
+        options <- xml_find_all(questions[[i]], ".//ul/li")
+        option_texts <- xml_text(options)
+        
+        answer_div <- xml_find_first(questions[[i]], ".//div[@class='answer']")
+        if (!is.null(answer_div)) {
+          correct_answer <- xml_text(answer_div)
+          correct_answer <- sub("^<b>Resposta:</b>\\s*", "", correct_answer)
+          correct_answer <- trimws(correct_answer)  # Remove espaços em branco extras
+          correct_index <- which(trimws(option_texts) == correct_answer)
+          if (length(correct_index) > 0) {
+            answers[[i]] <- correct_index[1]
+          } else {
+            answers[[i]] <- NA
+            print(paste("Aviso: Não foi possível encontrar a resposta correta para a pergunta", i))
+            print("Opções:")
+            print(option_texts)
+            print("Resposta correta:")
+            print(correct_answer)
+          }
+        } else {
+          answers[[i]] <- NA
+          print(paste("Aviso: Não foi encontrada uma div de resposta para a pergunta", i))
+        }
+        
+        explanation <- xml_text(xml_find_first(questions[[i]], ".//div[@class='explanation']"))
+        
+        quiz_ui[[i]] <- tagList(
+          tags$p(tags$strong(paste(i, ".", question_text))),
+          radioButtons(session$ns(paste0("q", i)), label = NULL, choices = option_texts, selected = character(0)),
+          tags$div(class = "answer", style = "display: none;", 
+                   tags$p(tags$strong("Resposta:"), correct_answer)),
+          tags$div(class = "explanation", style = "display: none;", 
+                   tags$p(tags$strong("Explicação:"), explanation)),
+          tags$button(class = "explanation-btn btn btn-sm btn-outline-primary", style = "display: none;", "Mostrar Explicação")
+        )
+      }
+      
+      correct_answers(answers)
+      
       tagList(
         tags$style("
           .answer, .explanation, .explanation-btn { display: none; }
           .explanation-btn { margin-left: 10px; }
         "),
-        HTML(quiz_content()),
+        quiz_ui,
         tags$script(HTML(
           sprintf("
           $(document).ready(function() {
@@ -107,14 +160,6 @@ server <- function(id, api_key, openai_url) {
               $(this).text(function(i, text) {
                 return text === 'Revelar Respostas' ? 'Ocultar Respostas' : 'Revelar Respostas';
               });
-            });
-
-            $('ol > li').each(function(index) {
-              var explanationBtn = $('<button>', {
-                text: 'Mostrar Explicação',
-                class: 'explanation-btn btn btn-sm btn-outline-primary'
-              });
-              $(this).append(explanationBtn);
             });
 
             $('.explanation-btn').off('click').on('click', function() {
@@ -127,6 +172,46 @@ server <- function(id, api_key, openai_url) {
           ", session$ns("reveal"))
         ))
       )
+    })
+
+    observeEvent(input$check, {
+      answers <- correct_answers()
+      print("Respostas corretas:")
+      print(answers)
+      
+      if (is.null(answers) || length(answers) == 0) {
+        output$score <- renderText("Nenhuma pergunta foi gerada ainda.")
+        return()
+      }
+
+      total_questions <- length(answers)
+      correct_count <- 0
+      
+      print("Verificando respostas:")
+      for (i in 1:total_questions) {
+        user_answer <- input[[paste0("q", i)]]
+        correct_answer <- answers[[i]]
+        
+        print(paste("Pergunta", i))
+        print(paste("Resposta do usuário:", user_answer))
+        print(paste("Resposta correta:", correct_answer))
+        
+        if (!is.null(user_answer) && !is.na(correct_answer) && !is.null(correct_answer)) {
+          if (as.numeric(user_answer) == correct_answer) {
+            correct_count <- correct_count + 1
+            print("Resposta correta!")
+          } else {
+            print("Resposta incorreta.")
+          }
+        } else {
+          print("Dados inválidos para esta pergunta.")
+        }
+      }
+      
+      score <- sprintf("Você acertou %d de %d perguntas (%.1f%%)", 
+                       correct_count, total_questions, (correct_count / total_questions) * 100)
+      output$score <- renderText(score)
+      print(paste("Pontuação final:", score))
     })
   })
 }
