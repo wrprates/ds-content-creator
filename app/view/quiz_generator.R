@@ -57,6 +57,7 @@ server <- function(id, api_key, openai_url) {
         "Cada pergunta deve ter 4 opções de resposta, com apenas uma correta. ",
         "Forneça a resposta correta após cada pergunta, envolvida em uma div com a classe 'answer'. ",
         "Antes da resposta, adicione o prefixo '<b>Resposta:</b> '. ",
+        "Após a resposta, adicione uma explicação detalhada do porquê esta é a resposta correta, envolvida em uma div com a classe 'explanation'. ",
         "O resultado deve ser em HTML puro, usando tags <p> para quebras de linha e <b> para destaque.",
         "Use <ol> para a lista de perguntas e <ul> para as opções de resposta.",
         "Não inclua nenhuma mensagem introdutória ou de conclusão."
@@ -77,15 +78,34 @@ server <- function(id, api_key, openai_url) {
     output$generated_quiz <- renderUI({
       req(quiz_content())
       tagList(
-        tags$style(".answer { display: none; }"),
+        tags$style("
+          .answer, .explanation, .explanation-btn { display: none; }
+          .explanation-btn { margin-left: 10px; }
+        "),
         HTML(quiz_content()),
         tags$script(HTML(
           sprintf("
           $(document).ready(function() {
             $('#%s').off('click').on('click', function() {
               $('.answer').toggle();
+              $('.explanation-btn').toggle();
               $(this).text(function(i, text) {
                 return text === 'Revelar Respostas' ? 'Ocultar Respostas' : 'Revelar Respostas';
+              });
+            });
+
+            $('ol > li').each(function(index) {
+              var explanationBtn = $('<button>', {
+                text: 'Mostrar Explicação',
+                class: 'explanation-btn btn btn-sm btn-outline-primary'
+              });
+              $(this).append(explanationBtn);
+            });
+
+            $('.explanation-btn').off('click').on('click', function() {
+              $(this).siblings('.explanation').toggle();
+              $(this).text(function(i, text) {
+                return text === 'Mostrar Explicação' ? 'Ocultar Explicação' : 'Mostrar Explicação';
               });
             });
           });
