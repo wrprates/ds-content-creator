@@ -11,7 +11,18 @@ box::use(
 )
 
 # Valores fixos específicos do módulo
-categories <- c("Estatística", "Machine Learning", "Método Científico", "Computação", "Conhecimento de Negócio")
+categories <- c(
+  "Qualidade de Dados (Análise Univariada)",
+  "Análise Exploratória de Dados (Multivariada)",
+  "Teste de Hipóteses",
+  "Machine Learning Não Supervisionado",
+  "Machine Learning Supervisionado",
+  "Visualização de Dados",
+  "Linguagem R para Data Science",
+  "Linguagem Python para Data Science",
+  "GIT",
+  "SQL"
+)
 levels <- c("Iniciante", "Intermediário", "Avançado")
 num_questions <- c(1, 3, 5, 10)
 
@@ -52,8 +63,12 @@ server <- function(id, api_key, openai_url) {
       num_questions <- input$num_questions
       
       prompt <- paste(
-        "Crie um quiz de", num_questions, "perguntas sobre", category, 
+        "Você é um especialista em Ciência de Dados com conhecimento profundo em todas as seguintes áreas:",
+        paste(categories, collapse = ", "),
+        ".\n\nCrie um quiz de", num_questions, "perguntas sobre", category, 
         "para um cientista de dados de nível", level, ". ",
+        "Mantenha as perguntas estritamente dentro do escopo da categoria '", category, "', ",
+        "sem avançar em outras categorias. ",
         "Cada pergunta deve ter 4 opções de resposta, com apenas uma correta. ",
         "Forneça a resposta correta após cada pergunta, envolvida em uma div com a classe 'answer'. ",
         "Antes da resposta, adicione o prefixo '<b>Resposta:</b> '. ",
