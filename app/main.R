@@ -1,13 +1,13 @@
 box::use(
   shiny[moduleServer, NS],
-  bslib[page_fillable, bs_theme, navset_card_tab, nav_panel],
-  waiter[use_waiter],
+  bslib[page_fillable, navset_card_tab, nav_panel, bs_theme],
+  waiter[use_waiter]
 )
 
 box::use(
-  ./view/content_generator,
-  ./view/quiz_generator,
-) 
+  app/view/content_generator,
+  app/view/quiz_generator
+)
 
 # Configurações globais
 api_key <- Sys.getenv("OPENAI_KEY")
@@ -16,6 +16,9 @@ openai_url <- "https://api.openai.com/v1/chat/completions"
 #' @export
 ui <- function(id) {
   ns <- NS(id)
+  
+  dark_theme <- bs_theme(version = 5, bootswatch = "darkly")
+  
   page_fillable(
     use_waiter(),
     navset_card_tab(
@@ -28,7 +31,7 @@ ui <- function(id) {
         quiz_generator$ui(ns("quiz_generator"))
       )
     ),
-    theme = bs_theme(bootswatch = "litera")
+    theme = dark_theme
   )
 }
 
