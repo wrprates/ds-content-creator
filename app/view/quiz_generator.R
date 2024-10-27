@@ -44,7 +44,7 @@ ui <- function(id) {
         conditionalPanel(
           condition = "input.check > 0",
           ns = ns,
-          actionButton(ns("reveal"), "Revelar Respostas", class = "mt-3")
+          actionButton(ns("reveal"), "Revelar Explicações", class = "mt-3")
         ),
         htmlOutput(ns("score"))
       ),
@@ -61,7 +61,7 @@ server <- function(id, api_key, openai_url) {
   moduleServer(id, function(input, output, session) {
     quiz_content <- reactiveVal("")
     correct_answers <- reactiveVal(list())
-    explanations <- reactiveVal(list())  # Adicionado para armazenar explicações
+    explanations <- reactiveVal(list())
     score_checked <- reactiveVal(FALSE)
 
     observeEvent(input$generate, {
@@ -110,7 +110,7 @@ server <- function(id, api_key, openai_url) {
       
       quiz_ui <- tagList()
       answers <- list()
-      explanations_list <- list()  # Lista para armazenar explicações
+      explanations_list <- list()
       
       for (i in seq_along(questions)) {
         question_text <- xml_text(xml_find_first(questions[[i]], "./p[1]"))
@@ -124,7 +124,7 @@ server <- function(id, api_key, openai_url) {
           correct_answer <- trimws(correct_answer)
           correct_index <- which(sapply(option_texts, function(x) grepl(correct_answer, x, fixed = TRUE)))
           if (length(correct_index) > 0) {
-            answers[[i]] <- as.character(correct_index[1])
+            answers[[i]] <- c("a", "b", "c", "d")[correct_index[1]]  # Convertendo para letra
           } else {
             answers[[i]] <- correct_answer
             print(paste("Aviso: Não foi possível encontrar o índice da resposta correta para a pergunta", i))
@@ -139,20 +139,22 @@ server <- function(id, api_key, openai_url) {
         }
         
         explanation <- xml_text(xml_find_first(questions[[i]], ".//div[@class='explanation']"))
-        explanations_list[[i]] <- explanation  # Armazenar a explicação
+        explanations_list[[i]] <- explanation
         
         quiz_ui[[i]] <- tagList(
           tags$p(tags$strong(paste(i, ".", question_text))),
-          radioButtons(session$ns(paste0("q", i)), label = NULL, choices = setNames(seq_along(option_texts), option_texts), selected = character(0)),
+          radioButtons(session$ns(paste0("q", i)), label = NULL, 
+                       choices = setNames(c("a", "b", "c", "d"), option_texts), 
+                       selected = character(0)),
           tags$div(id = session$ns(paste0("answer", i)), class = "answer", style = "display: none;", 
-                   tags$p(tags$strong("Resposta:"), correct_answer)),
+                   tags$p(tags$strong("Resposta:"), answers[[i]])),
           tags$div(id = session$ns(paste0("explanation", i)), class = "explanation", style = "display: none;", 
                    tags$p(tags$strong("Explicação:"), explanation))
         )
       }
       
       correct_answers(answers)
-      explanations(explanations_list)  # Armazenar as explicações
+      explanations(explanations_list)
       print("Respostas corretas:")
       print(answers)
       
@@ -203,7 +205,7 @@ server <- function(id, api_key, openai_url) {
       req(score_checked())
       
       answers <- correct_answers()
-      explanations_list <- explanations()  # Obter as explicações armazenadas
+      explanations_list <- explanations()
       
       for (i in seq_along(answers)) {
         removeUI(selector = paste0("#", session$ns(paste0("answer", i))))
@@ -216,7 +218,7 @@ server <- function(id, api_key, openai_url) {
             tags$div(id = session$ns(paste0("answer", i)), class = "answer", 
                      tags$p(tags$strong("Resposta:"), answers[[i]])),
             tags$div(id = session$ns(paste0("explanation", i)), class = "explanation", 
-                     tags$p(tags$strong("Explicação:"), explanations_list[[i]]))  # Usar a explicação armazenada
+                     tags$p(tags$strong("Explicação:"), explanations_list[[i]]))
           )
         )
       }
