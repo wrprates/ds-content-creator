@@ -3,7 +3,7 @@ box::use(
   httr[POST, add_headers, content_type_json, content, status_code],
   jsonlite[toJSON, fromJSON],
   rvest[read_html, html_text],
-  shiny[NS, moduleServer, observeEvent, renderUI, HTML, selectInput, actionButton, tags, htmlOutput, tagList, div, reactiveVal, isolate, req, radioButtons, textOutput, renderText],
+  shiny[NS, moduleServer, observeEvent, renderUI, HTML, selectInput, actionButton, tags, htmlOutput, tagList, div, reactiveVal, isolate, req, radioButtons, textOutput, renderText, conditionalPanel, removeUI, insertUI],
   stats[setNames],
   xml2[xml_find_all, xml_find_first, xml_text],
   waiter[waiter_show, waiter_hide, bs5_spinner],
@@ -40,9 +40,13 @@ ui <- function(id) {
         selectInput(ns("level"), "Selecione o nível do Quiz:", choices = levels, selected = "Intermediário"),
         selectInput(ns("num_questions"), "Número de perguntas:", choices = num_questions, selected = 3),
         actionButton(ns("generate"), "Gerar Quiz"),
-        actionButton(ns("reveal"), "Revelar Respostas", class = "mt-3"),
         actionButton(ns("check"), "Verificar Respostas", class = "mt-3"),
-        htmlOutput(ns("score"))  # Mudamos de textOutput para htmlOutput
+        conditionalPanel(
+          condition = "input.check > 0",
+          ns = ns,
+          actionButton(ns("reveal"), "Revelar Respostas", class = "mt-3")
+        ),
+        htmlOutput(ns("score"))
       ),
       div(
         id = ns("quiz_container"),
@@ -57,6 +61,7 @@ server <- function(id, api_key, openai_url) {
   moduleServer(id, function(input, output, session) {
     quiz_content <- reactiveVal("")
     correct_answers <- reactiveVal(list())
+    score_checked <- reactiveVal(FALSE)
 
     observeEvent(input$generate, {
       waiter_show(
@@ -104,6 +109,7 @@ server <- function(id, api_key, openai_url) {
       
       quiz_ui <- tagList()
       answers <- list()
+      explanations <- list()
       
       for (i in seq_along(questions)) {
         question_text <- xml_text(xml_find_first(questions[[i]], "./p[1]"))
@@ -119,8 +125,8 @@ server <- function(id, api_key, openai_url) {
           if (length(correct_index) > 0) {
             answers[[i]] <- as.character(correct_index[1])
           } else {
-            answers[[i]] <- NA_character_
-            print(paste("Aviso: Não foi possível encontrar a resposta correta para a pergunta", i))
+            answers[[i]] <- correct_answer
+            print(paste("Aviso: Não foi possível encontrar o índice da resposta correta para a pergunta", i))
             print("Opções:")
             print(option_texts)
             print("Resposta correta:")
@@ -186,6 +192,28 @@ server <- function(id, api_key, openai_url) {
                        correct_count, total_questions, (correct_count / total_questions) * 100)
       print(paste("Pontuação final:", score))
       output$score <- renderUI(HTML(paste("<b>", score, "</b>")))
+      score_checked(TRUE)
+    })
+
+    observeEvent(input$reveal, {
+      req(quiz_content())
+      req(score_checked())
+      
+      for (i in seq_along(correct_answers())) {
+        removeUI(selector = paste0("#", session$ns(paste0("answer", i))))
+        removeUI(selector = paste0("#", session$ns(paste0("explanation", i))))
+        
+        insertUI(
+          selector = paste0("#", session$ns(paste0("q", i))),
+          where = "afterEnd",
+          ui = tagList(
+            tags$div(id = session$ns(paste0("answer", i)), class = "answer", 
+                     tags$p(tags$strong("Resposta:"), correct_answers()[[i]])),
+            tags$div(id = session$ns(paste0("explanation", i)), class = "explanation", 
+                     tags$p(tags$strong("Explicação:"), "Explicação da resposta"))
+          )
+        )
+      }
     })
   })
 }
