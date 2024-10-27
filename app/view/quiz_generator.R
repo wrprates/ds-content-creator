@@ -61,6 +61,7 @@ server <- function(id, api_key, openai_url) {
   moduleServer(id, function(input, output, session) {
     quiz_content <- reactiveVal("")
     correct_answers <- reactiveVal(list())
+    explanations <- reactiveVal(list())  # Adicionado para armazenar explicações
     score_checked <- reactiveVal(FALSE)
 
     observeEvent(input$generate, {
@@ -109,7 +110,7 @@ server <- function(id, api_key, openai_url) {
       
       quiz_ui <- tagList()
       answers <- list()
-      explanations <- list()
+      explanations_list <- list()  # Lista para armazenar explicações
       
       for (i in seq_along(questions)) {
         question_text <- xml_text(xml_find_first(questions[[i]], "./p[1]"))
@@ -138,6 +139,7 @@ server <- function(id, api_key, openai_url) {
         }
         
         explanation <- xml_text(xml_find_first(questions[[i]], ".//div[@class='explanation']"))
+        explanations_list[[i]] <- explanation  # Armazenar a explicação
         
         quiz_ui[[i]] <- tagList(
           tags$p(tags$strong(paste(i, ".", question_text))),
@@ -150,6 +152,7 @@ server <- function(id, api_key, openai_url) {
       }
       
       correct_answers(answers)
+      explanations(explanations_list)  # Armazenar as explicações
       print("Respostas corretas:")
       print(answers)
       
@@ -199,7 +202,10 @@ server <- function(id, api_key, openai_url) {
       req(quiz_content())
       req(score_checked())
       
-      for (i in seq_along(correct_answers())) {
+      answers <- correct_answers()
+      explanations_list <- explanations()  # Obter as explicações armazenadas
+      
+      for (i in seq_along(answers)) {
         removeUI(selector = paste0("#", session$ns(paste0("answer", i))))
         removeUI(selector = paste0("#", session$ns(paste0("explanation", i))))
         
@@ -208,9 +214,9 @@ server <- function(id, api_key, openai_url) {
           where = "afterEnd",
           ui = tagList(
             tags$div(id = session$ns(paste0("answer", i)), class = "answer", 
-                     tags$p(tags$strong("Resposta:"), correct_answers()[[i]])),
+                     tags$p(tags$strong("Resposta:"), answers[[i]])),
             tags$div(id = session$ns(paste0("explanation", i)), class = "explanation", 
-                     tags$p(tags$strong("Explicação:"), "Explicação da resposta"))
+                     tags$p(tags$strong("Explicação:"), explanations_list[[i]]))  # Usar a explicação armazenada
           )
         )
       }
